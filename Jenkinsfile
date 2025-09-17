@@ -1,9 +1,7 @@
 pipeline {
     agent any
     
-    tools {
-        pythonInstallation  'Python3'
-    }
+
     
     stages {
         stage('Install Dependencies') {
