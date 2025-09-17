@@ -28,7 +28,7 @@ pipeline {
                     echo Setting up Python environment...
                     set PATH=D:\\install\\Python313;D:\\install\\Python313\\Scripts;%PATH%
                     "${env.PYTHON_PATH}" -m pip install --upgrade pip --quiet
-                    "${env.PYTHON_PATH}" -m pip install -r requirements.txt flake8 pytest coverage --quiet
+                    "${env.PYTHON_PATH}" -m pip install -r requirements.txt flake8 --quiet
                 """
             }
         }
@@ -48,7 +48,7 @@ pipeline {
                 bat """
                     chcp 65001 >nul
                     echo Running tests with coverage...
-                    "${env.PYTHON_PATH}" -m pytest --cov=app --cov-report=html tests/ || exit 1
+                    "${env.PYTHON_PATH}" -m pytest tests/ --cov=app --cov-report=html || exit 1
                 """
             }
             post {
