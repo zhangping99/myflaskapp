@@ -1,9 +1,7 @@
 pipeline {
     agent any
     
-    tools {
-        python 'Python3'  // 这里的名称要与全局工具配置中的Python名称一致
-    }
+
     
     stages {
         stage('Checkout') {
