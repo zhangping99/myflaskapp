@@ -30,8 +30,8 @@ pipeline {
                 bat """
                     @echo off
                     echo "=== 修复Python313的pip环境 ==="
-                    ${PYTHON_PATH} -m ensurepip --upgrade  // 核心：重建pip
-                    ${PYTHON_PATH} -m pip --version       // 验证pip是否修复成功
+                    ${PYTHON_PATH} -m ensurepip --upgrade  
+                    ${PYTHON_PATH} -m pip --version       
                 """
             }
         }
