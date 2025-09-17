@@ -1,4 +1,5 @@
-flask==2.0.1
+flask==3.0.0
 pytest==6.2.5
 coverage==6.2
-pytest-cov==3.0.0  
+pytest-cov==3.0.0
+werkzeug==3.0.1  # 添加这一行以确保兼容性
