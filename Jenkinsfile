@@ -6,7 +6,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/yourusername/yourrepo.git', branch: 'main'
+                git url: 'https://github.com/zhangping99/myflaskapp.git', branch: 'main'
                 // 替换为你的代码仓库地址
             }
         }
