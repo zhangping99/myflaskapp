@@ -1,64 +1,54 @@
 pipeline {
     agent any
     
-    // Tool configuration (match Jenkins Global Tool "Python3" name, path: d:\install\python310)
     tools {
         python 'Python3'
     }
     
     stages {
-        // --------------------------
-        // Install Dependencies Stage
-        // --------------------------
         stage('Install Dependencies') {
             steps {
                 bat '''
                     @echo off
-                    :: 1. Kill remaining Python processes to release file locks
+                    :: Kill remaining Python processes
                     echo "Killing remaining Python processes..."
                     taskkill /f /im python.exe 2>nul
                     
-                    :: 2. Create virtual environment in Jenkins workspace (no system dependency pollution)
+                    :: Create virtual environment
                     echo "Creating project virtual environment..."
                     python -m venv venv
                     
-                    :: 3. Activate virtual environment (Windows requires "call" for batch files)
+                    :: Activate virtual environment (使用双反斜杠转义)
                     echo "Activating virtual environment..."
-                    call venv\Scripts\activate.bat
+                    call venv\\Scripts\\activate.bat  // 关键修改：\ → \\
                     
-                    :: 4. Upgrade pip in virtual environment (--user avoids system-level operations)
+                    :: Upgrade pip
                     echo "Upgrading pip in virtual environment..."
                     python -m pip install --upgrade pip --user --quiet
                     
-                    :: 5. Install project dependencies in virtual environment
+                    :: Install dependencies
                     echo "Installing project dependencies..."
                     pip install -r requirements.txt --quiet
                 '''
             }
         }
 
-        // --------------------------
-        // Lint Stage (Code Quality Check)
-        // --------------------------
         stage('Lint') {
             steps {
                 bat '''
                     @echo off
-                    call venv\Scripts\activate.bat
+                    call venv\\Scripts\\activate.bat  // 关键修改：\ → \\
                     pip install flake8 --quiet
                     flake8 app.py tests/
                 '''
             }
         }
 
-        // --------------------------
-        // Test Stage (With Coverage Report)
-        // --------------------------
         stage('Test') {
             steps {
                 bat '''
                     @echo off
-                    call venv\Scripts\activate.bat
+                    call venv\\Scripts\\activate.bat  // 关键修改：\ → \\
                     pip install pytest coverage --quiet
                     pytest --cov=app tests/ --cov-report=html
                 '''
@@ -77,18 +67,7 @@ pipeline {
             }
         }
 
-        // --------------------------
-        // Build Stage (Optional)
-        // --------------------------
-        stage('Build') {
-            steps {
-                echo "Build completed. Virtual environment dependencies are ready for deployment."
-            }
-        }
-
-        // --------------------------
-        // Deploy Stage
-        // --------------------------
+        // 其他阶段保持不变...
         stage('Deploy') {
             steps {
                 bat '''
@@ -97,16 +76,9 @@ pipeline {
                     call deploy.bat
                 '''
             }
-            post {
-                success { echo "Application deployed successfully!" }
-                failure { echo "Application deployment failed!" }
-            }
         }
     }
-
-    // --------------------------
-    // Global Post Actions
-    // --------------------------
+    
     post {
         success { echo "CI/CD pipeline completed successfully!" }
         failure { echo "CI/CD pipeline failed!" }

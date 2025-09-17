@@ -3,7 +3,7 @@
 set "JENKINS_WORKSPACE=C:\ProgramData\Jenkins\.jenkins\workspace\myflaskapp"
 set "DEPLOY_DIR=D:\my-python-webapp-deploy"
 set "PORT=5000"
-set "PYTHON_PATH=%JENKINS_WORKSPACE%\venv\Scripts\python.exe"
+set "PYTHON_PATH=%JENKINS_WORKSPACE%\\venv\\Scripts\\python.exe"
 
 :: 1. Stop existing Flask service
 echo Stopping existing Flask service...
@@ -23,7 +23,7 @@ xcopy "%JENKINS_WORKSPACE%\venv" "%DEPLOY_DIR%\venv\" /e /y /q
 
 :: 4. Start Flask service with copied virtual environment
 echo Starting Flask service...
-start "Flask Web App" "%DEPLOY_DIR%\venv\Scripts\python.exe" "%DEPLOY_DIR%\app.py"
+start "Flask Web App" "%DEPLOY_DIR%\\venv\\Scripts\\python.exe" "%DEPLOY_DIR%\\app.py"
 
 :: 5. Verify deployment
 timeout /t 3 /nobreak >nul
