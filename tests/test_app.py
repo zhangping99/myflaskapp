@@ -15,5 +15,3 @@ def test_hello(client):
     response = client.get('/')
     assert response.data == b"Hello, CI/CD with Jenkins!"
     assert response.status_code == 200
-
-

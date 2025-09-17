@@ -38,7 +38,7 @@ pipeline {
                 bat """
                     chcp 65001 >nul
                     echo Running code style checks...
-                    "${env.PYTHON_PATH}" -m flake8 app.py test/ || exit 1
+                    "${env.PYTHON_PATH}" -m flake8 app.py tests/ || exit 1
                 """
             }
         }
