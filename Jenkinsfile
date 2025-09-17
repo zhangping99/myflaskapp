@@ -4,32 +4,28 @@ pipeline {
 
     
     stages {
-        stage('Install Dependencies') {
-            steps {
-                bat '''
-                    @echo off
-                    :: Kill remaining Python processes
-                    echo "Killing remaining Python processes..."
-                    taskkill /f /im python.exe 2>nul
-                    
-                    :: Create virtual environment
-                    echo "Creating project virtual environment..."
-                    python -m venv venv
-                    
-                    :: Activate virtual environment (使用双反斜杠转义)
-                    echo "Activating virtual environment..."
-                    call venv\\Scripts\\activate.bat  // 关键修改：\ → \\
-                    
-                    :: Upgrade pip
-                    echo "Upgrading pip in virtual environment..."
-                    python -m pip install --upgrade pip --user --quiet
-                    
-                    :: Install dependencies
-                    echo "Installing project dependencies..."
-                    pip install -r requirements.txt --quiet
-                '''
-            }
-        }
+		stage('Install Dependencies') {
+			steps {
+				bat '''
+					@echo off
+					echo "Killing remaining Python processes..."
+					taskkill /f /im python.exe 2>nul
+					
+					echo "Creating project virtual environment..."
+					python -m venv venv
+					
+					echo "Activating virtual environment..."
+					call venv\\Scripts\\activate.bat
+					
+					:: 【核心修改】移除--user参数，虚拟环境无需该参数
+					echo "Upgrading pip in virtual environment..."
+					python -m pip install --upgrade pip --quiet  // 删除--user
+					
+					echo "Installing project dependencies..."
+					pip install -r requirements.txt --quiet
+				'''
+			}
+		}
 
         stage('Lint') {
             steps {
