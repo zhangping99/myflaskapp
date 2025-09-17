@@ -2,7 +2,8 @@ pipeline {
     agent any
     
     tools {
-        python 'Python3'  // 这里的名称要与全局工具配置中的Python名称一致
+        // 修正工具类型为pythonInstallation，与ShiningPanda插件兼容
+        pythonInstallation 'Python3'  // 名称需与全局工具配置中的Python名称一致
     }
     
     stages {
@@ -56,7 +57,6 @@ pipeline {
         stage('Deploy') {
             steps {
                 // 这里根据实际部署需求编写部署脚本
-                // 例如使用bat命令复制文件到目标服务器
                 echo 'Deploying application...'
                 // 示例：启动应用
                 // bat 'start python app.py'
