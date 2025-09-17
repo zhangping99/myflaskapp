@@ -11,7 +11,7 @@ pipeline {
                 git(
                     url: 'https://github.com/zhangping99/myflaskapp.git',  // 你的GitHub仓库地址
                     branch: 'main',  // 你的分支（通常是main）
-                    credentialsId: 'github-pat-zhangping99'  // 你的Jenkins GitHub凭据ID（之前配置的PAT）
+                    credentialsId: 'aa'  // 你的Jenkins GitHub凭据ID（之前配置的PAT）
                 )
                 echo "代码拉取完成！当前工作目录：${env.WORKSPACE}"  // 打印工作目录，方便排查路径问题
             }
@@ -21,32 +21,33 @@ pipeline {
         // 阶段2：安装依赖（用系统pip，含版本验证）
         // --------------------------
         stage('Install Dependencies') {
-            steps {
-                bat '''
-                    @echo off
-                    echo ==============================================
-                    echo 验证当前Python/pip版本（确保与系统一致）
-                    echo ==============================================
-                    python --version || (echo "❌ Python命令不可用！检查环境变量" && exit /b 1)
-                    pip --version || (echo "❌ pip命令不可用！检查Python环境变量" && exit /b 1)
-                    
-                    echo ==============================================
-                    echo 清理残留Python进程（避免文件/端口占用）
-                    echo ==============================================
-                    taskkill /f /im python.exe 2>nul || echo "⚠️  未找到残留Python进程，继续执行"
-                    
-                    echo ==============================================
-                    echo 升级pip并安装项目依赖
-                    echo ==============================================
-                    python -m pip install --upgrade pip --quiet || (echo "❌ pip升级失败！检查网络或权限" && exit /b 1)
-                    pip install -r requirements.txt flake8 pytest coverage --quiet || (echo "❌ 依赖安装失败！检查requirements.txt" && exit /b 1)
-                    
-                    echo ==============================================
-                    echo 依赖安装完成！已安装的依赖列表：
-                    echo ==============================================
-                    pip list | findstr /i "flask pytest flake8"  // 仅显示关键依赖，验证是否安装成功
-                '''
-            }
+			steps {
+					bat '''
+						@echo off
+						chcp 65001 >nul  // 强制设置UTF-8编码，解决中文乱码（关键）
+						echo ==============================================
+						echo Verify current Python/pip version (must match system)
+						echo ==============================================
+						python --version || (echo "❌ Python command not found! Check PATH" && exit /b 1)
+						pip --version || (echo "❌ pip command not found! Check Python PATH" && exit /b 1)
+						
+						echo ==============================================
+						echo Kill remaining Python processes (release file/port)
+						echo ==============================================
+						taskkill /f /im python.exe 2>nul || echo "⚠️ No remaining Python processes found, continue"
+						
+						echo ==============================================
+						echo Upgrade pip and install project dependencies
+						echo ==============================================
+						python -m pip install --upgrade pip --quiet || (echo "❌ Failed to upgrade pip! Check network/permissions" && exit /b 1)
+						pip install -r requirements.txt flake8 pytest coverage --quiet || (echo "❌ Failed to install dependencies! Check requirements.txt" && exit /b 1)
+						
+						echo ==============================================
+						echo Dependencies installed successfully! Installed packages:
+						echo ==============================================
+						pip list | findstr /i "flask pytest flake8"
+					'''
+				}
         }
 
         // --------------------------
