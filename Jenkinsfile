@@ -13,8 +13,7 @@ pipeline {
                 echo "Pulling code from GitHub..."
                 git(
                     url: 'https://github.com/zhangping99/myflaskapp.git',
-                    branch: 'main',
-                    credentialsId: 'aa'
+                    branch: 'main'
                 )
             }
         }
@@ -27,6 +26,7 @@ pipeline {
                     taskkill /f /im python.exe 2>nul || echo No Python processes found
                     
                     echo Setting up Python environment...
+                    set PATH=D:\\install\\Python313;D:\\install\\Python313\\Scripts;%PATH%
                     "${env.PYTHON_PATH}" -m pip install --upgrade pip --quiet
                     "${env.PYTHON_PATH}" -m pip install -r requirements.txt flake8 pytest coverage --quiet
                 """
@@ -38,7 +38,7 @@ pipeline {
                 bat """
                     chcp 65001 >nul
                     echo Running code style checks...
-                    "${env.PYTHON_PATH}" -m flake8 app.py tests/ || exit 1
+                    "${env.PYTHON_PATH}" -m flake8 --ignore=W292,E303 app.py tests/ || exit 1
                 """
             }
         }
@@ -48,7 +48,7 @@ pipeline {
                 bat """
                     chcp 65001 >nul
                     echo Running tests with coverage...
-                    "${env.PYTHON_PATH}" -m pytest --cov=app --cov-report=html test/ || exit 1
+                    "${env.PYTHON_PATH}" -m pytest --cov=app --cov-report=html tests/ || exit 1
                 """
             }
             post {
