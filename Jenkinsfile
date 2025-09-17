@@ -1,101 +1,56 @@
 pipeline {
-    agent any  // Use Jenkins default build node (local server)
+    agent any
     
-    // Define environment variables for consistent paths
     environment {
-        PYTHON_PATH = 'd:\\install\\python310\\python.exe'  // Full path to Python executable
+        PYTHON_PATH = 'D:\\install\\Python313\\python.exe'
+        WORKSPACE_PATH = "${env.WORKSPACE}"
+        DEPLOY_DIR = 'D:\\my-python-webapp-deploy'
     }
     
     stages {
-        // --------------------------
-        // Stage 1: Checkout Code
-        // Note: Jenkins already checks out code in Declarative: Checkout SCM stage
-        // This stage can be removed or simplified
-        // --------------------------
         stage('Checkout Code') {
             steps {
-                echo "Starting to pull code from GitHub..."
+                echo "Pulling code from GitHub..."
                 git(
                     url: 'https://github.com/zhangping99/myflaskapp.git',
                     branch: 'main',
                     credentialsId: 'aa'
                 )
-                echo "Code pulled successfully! Current workspace: ${env.WORKSPACE}"
             }
         }
 
-        // --------------------------
-        // Stage 2: Install Dependencies
-        // --------------------------
-        stage('Install Dependencies') {
+        stage('Setup Environment') {
             steps {
-                bat '''
-                    @echo off
-                    chcp 65001 >nul  :: Force UTF-8 encoding to fix character issues
-                    echo ==============================================
-                    echo Verify current Python/pip version (must match system)
-                    echo ==============================================
-                    "%PYTHON_PATH%" --version || (echo "❌ Python command not found! Check PATH" && exit /b 1)
-                    "%PYTHON_PATH%" -m pip --version || (echo "❌ pip command not found! Check Python installation" && exit /b 1)
+                bat """
+                    chcp 65001 >nul
+                    echo Cleaning up previous processes...
+                    taskkill /f /im python.exe 2>nul || echo No Python processes found
                     
-                    echo ==============================================
-                    echo Kill remaining Python processes (release files/ports)
-                    echo ==============================================
-                    taskkill /f /im python.exe 2>nul || echo "⚠️ No remaining Python processes found, continuing"
-                    
-                    echo ==============================================
-                    echo Upgrade pip and install project dependencies
-                    echo ==============================================
-                    "%PYTHON_PATH%" -m pip install --upgrade pip --quiet || (echo "❌ Failed to upgrade pip! Check network/permissions" && exit /b 1)
-                    "%PYTHON_PATH%" -m pip install -r requirements.txt flake8 pytest coverage --quiet || (echo "❌ Failed to install dependencies! Check requirements.txt" && exit /b 1)
-                    
-                    echo ==============================================
-                    echo Dependencies installed successfully! Installed packages:
-                    echo ==============================================
-                    "%PYTHON_PATH%" -m pip list | findstr /i "flask pytest flake8"
-                '''
+                    echo Setting up Python environment...
+                    "${env.PYTHON_PATH}" -m pip install --upgrade pip --quiet
+                    "${env.PYTHON_PATH}" -m pip install -r requirements.txt flake8 pytest coverage --quiet
+                """
             }
         }
 
-        // --------------------------
-        // Stage 3: Code Style Check (flake8)
-        // --------------------------
-        stage('Code Lint (flake8)') {
+        stage('Code Quality') {
             steps {
-                bat '''
-                    @echo off
-                    chcp 65001 >nul  :: Force UTF-8 encoding
-                    echo ==============================================
-                    echo Execute code style check (flake8)
-                    echo ==============================================
-                    "%PYTHON_PATH%" -m flake8 app.py tests/ || (
-                        echo "❌ Code style check failed! Please fix issues according to logs (e.g., blank lines, indentation)"
-                        exit /b 1
-                    )
-                    echo "✅ Code style check passed! No PEP8 errors"
-                '''
+                bat """
+                    chcp 65001 >nul
+                    echo Running code style checks...
+                    "${env.PYTHON_PATH}" -m flake8 app.py test/ || exit 1
+                """
             }
         }
 
-        // --------------------------
-        // Stage 4: Automated Tests (pytest)
-        // --------------------------
-        stage('Run Tests (pytest)') {
+        stage('Run Tests') {
             steps {
-                bat '''
-                    @echo off
-                    chcp 65001 >nul  :: Force UTF-8 encoding
-                    echo ==============================================
-                    echo Execute automated tests (pytest) and generate coverage report
-                    echo ==============================================
-                    "%PYTHON_PATH%" -m pytest --cov=app tests/ --cov-report=html || (
-                        echo "❌ Automated tests failed! Please check test cases or code logic"
-                        exit /b 1
-                    )
-                    echo "✅ Automated tests passed! All test cases executed successfully"
-                '''
+                bat """
+                    chcp 65001 >nul
+                    echo Running tests with coverage...
+                    "${env.PYTHON_PATH}" -m pytest --cov=app --cov-report=html test/ || exit 1
+                """
             }
-            // Display coverage report in Jenkins (requires HTML Publisher plugin)
             post {
                 always {
                     publishHTML(target: [
@@ -110,44 +65,37 @@ pipeline {
             }
         }
 
-        // --------------------------
-        // Stage 5: Deploy Application
-        // --------------------------
-        stage('Deploy Application') {
+        stage('Deploy') {
             steps {
-                bat '''
-                    @echo off
-                    chcp 65001 >nul  :: Force UTF-8 encoding
-                    echo ==============================================
-                    echo Execute deployment script (deploy.bat)
-                    echo ==============================================
-                    if not exist "deploy.bat" (
-                        echo "❌ Deployment script deploy.bat not found! Please check project root directory"
-                        exit /b 1
-                    )
-                    call deploy.bat || (
-                        echo "❌ Deployment script execution failed! Please check deploy.bat logs"
-                        exit /b 1
-                    )
-                    echo "✅ Application deployed successfully! Access address: http://localhost:5000"
-                '''
+                bat """
+                    chcp 65001 >nul
+                    echo Deploying application...
+                    
+                    echo Stopping existing services...
+                    taskkill /f /im python.exe 2>nul || echo No running services found
+                    
+                    echo Preparing deployment directory...
+                    if not exist "${env.DEPLOY_DIR}" mkdir "${env.DEPLOY_DIR}"
+                    xcopy "${env.WORKSPACE_PATH}\\app.py" "${env.DEPLOY_DIR}\\" /y /q
+                    xcopy "${env.WORKSPACE_PATH}\\requirements.txt" "${env.DEPLOY_DIR}\\" /y /q
+                    
+                    echo Starting Flask application...
+                    start "Flask Web App" "${env.PYTHON_PATH}" "${env.DEPLOY_DIR}\\app.py"
+                    
+                    timeout /t 5 /nobreak >nul
+                    echo Checking if application is running...
+                    netstat -ano | findstr :5000 >nul && echo ✅ Deployment successful! Access: http://localhost:5000 || echo ❌ Deployment failed!
+                """
             }
         }
     }
 
-    // --------------------------
-    // Global build results
-    // --------------------------
     post {
         success {
-            echo "🎉 Full CI/CD pipeline executed successfully!"
-            // Optional: Add email notification (requires email plugin configuration)
-            // emailext to: 'your-email@xxx.com', subject: 'Jenkins Build Success', body: 'Application deployed to http://localhost:5000'
+            echo "🎉 Pipeline executed successfully!"
         }
         failure {
-            echo "❌ Full CI/CD pipeline execution failed! Please check each stage's logs for troubleshooting"
-            // Optional: Add failure notification
-            // emailext to: 'your-email@xxx.com', subject: 'Jenkins Build Failed', body: 'Failure logs: ${BUILD_URL}console'
+            echo "❌ Pipeline execution failed!"
         }
     }
 }
