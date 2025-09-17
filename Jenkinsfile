@@ -2,8 +2,8 @@ pipeline {
     agent any
     
     tools {
-        // 使用完整的Python工具类名，与Jenkins插件要求匹配
-        'jenkins.plugins.shiningpanda.tools.PythonInstallation' 'Python3'
+        // 将Python名称改为小写的python3，匹配系统提示的可能名称
+        'jenkins.plugins.shiningpanda.tools.PythonInstallation' 'python3'
     }
     
     stages {
