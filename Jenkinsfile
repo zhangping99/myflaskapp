@@ -1,55 +1,35 @@
 pipeline {
     agent any
     
-    environment {
-        PYTHON_PATH = 'D:\\install\\Python313\\python.exe'
-        WORKSPACE_PATH = "${env.WORKSPACE}"
-        DEPLOY_DIR = 'D:\\my-python-webapp-deploy'
+    tools {
+        python 'Python3'  // 这里的名称要与全局工具配置中的Python名称一致
     }
     
     stages {
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                echo "Pulling code from GitHub..."
-                git(
-                    url: 'https://github.com/zhangping99/myflaskapp.git',
-                    branch: 'main'
-                )
+                git url: 'https://github.com/yourusername/yourrepo.git', branch: 'main'
+                // 替换为你的代码仓库地址
             }
         }
-
-        stage('Setup Environment') {
+        
+        stage('Install Dependencies') {
             steps {
-                bat """
-                    chcp 65001 >nul
-                    echo Cleaning up previous processes...
-                    taskkill /f /im python.exe 2>nul || echo No Python processes found
-                    
-                    echo Setting up Python environment...
-                    set PATH=D:\\install\\Python313;D:\\install\\Python313\\Scripts;%PATH%
-                    "${env.PYTHON_PATH}" -m pip install --upgrade pip --quiet
-                    "${env.PYTHON_PATH}" -m pip install -r requirements.txt flake8 --quiet
-                """
+                bat 'python -m pip install --upgrade pip'
+                bat 'pip install -r requirements.txt'
             }
         }
-
-        stage('Code Quality') {
+        
+        stage('Lint') {
             steps {
-                bat """
-                    chcp 65001 >nul
-                    echo Running code style checks...
-                    "${env.PYTHON_PATH}" -m flake8 --ignore=W292,E303 app.py tests/ || exit 1
-                """
+                bat 'pip install flake8'
+                bat 'flake8 app.py tests/'
             }
         }
-
-        stage('Run Tests') {
+        
+        stage('Test') {
             steps {
-                bat """
-                    chcp 65001 >nul
-                    echo Running tests with coverage...
-                    "${env.PYTHON_PATH}" -m pytest tests/ --cov=app --cov-report=html || exit 1
-                """
+                bat 'pytest --cov=app tests/ --cov-report=html'
             }
             post {
                 always {
@@ -59,43 +39,39 @@ pipeline {
                         keepAll: true,
                         reportDir: 'htmlcov',
                         reportFiles: 'index.html',
-                        reportName: 'Test Coverage Report'
+                        reportName: 'Coverage Report'
                     ])
                 }
             }
         }
-
+        
+        stage('Build') {
+            steps {
+                // 如果需要打包成可执行文件或部署包
+                bat 'pip install pyinstaller'
+                bat 'pyinstaller --onefile app.py'
+            }
+        }
+        
         stage('Deploy') {
             steps {
-                bat """
-                    chcp 65001 >nul
-                    echo Deploying application...
-                    
-                    echo Stopping existing services...
-                    taskkill /f /im python.exe 2>nul || echo No running services found
-                    
-                    echo Preparing deployment directory...
-                    if not exist "${env.DEPLOY_DIR}" mkdir "${env.DEPLOY_DIR}"
-                    xcopy "${env.WORKSPACE_PATH}\\app.py" "${env.DEPLOY_DIR}\\" /y /q
-                    xcopy "${env.WORKSPACE_PATH}\\requirements.txt" "${env.DEPLOY_DIR}\\" /y /q
-                    
-                    echo Starting Flask application...
-                    start "Flask Web App" "${env.PYTHON_PATH}" "${env.DEPLOY_DIR}\\app.py"
-                    
-                    timeout /t 5 /nobreak >nul
-                    echo Checking if application is running...
-                    netstat -ano | findstr :5000 >nul && echo ✅ Deployment successful! Access: http://localhost:5000 || echo ❌ Deployment failed!
-                """
+                // 这里根据实际部署需求编写部署脚本
+                // 例如使用bat命令复制文件到目标服务器
+                echo 'Deploying application...'
+                // 示例：启动应用
+                // bat 'start python app.py'
             }
         }
     }
-
+    
     post {
         success {
-            echo "🎉 Pipeline executed successfully!"
+            echo 'CI/CD pipeline completed successfully!'
+            // 可以配置邮件通知
         }
         failure {
-            echo "❌ Pipeline execution failed!"
+            echo 'CI/CD pipeline failed!'
+            // 可以配置邮件通知
         }
     }
 }
