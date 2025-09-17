@@ -1,143 +1,153 @@
 pipeline {
-    agent any  // 使用Jenkins默认的构建节点（本地服务器）
+    agent any  // Use Jenkins default build node (local server)
+    
+    // Define environment variables for consistent paths
+    environment {
+        PYTHON_PATH = 'd:\\install\\python310\\python.exe'  // Full path to Python executable
+    }
     
     stages {
         // --------------------------
-        // 阶段1：拉取代码（Jenkins自动执行，无需额外配置）
+        // Stage 1: Checkout Code
+        // Note: Jenkins already checks out code in Declarative: Checkout SCM stage
+        // This stage can be removed or simplified
         // --------------------------
         stage('Checkout Code') {
             steps {
-                echo "开始从GitHub拉取代码..."
+                echo "Starting to pull code from GitHub..."
                 git(
-                    url: 'https://github.com/zhangping99/myflaskapp.git',  // 你的GitHub仓库地址
-                    branch: 'main',  // 你的分支（通常是main）
-                    credentialsId: 'aa'  // 你的Jenkins GitHub凭据ID（之前配置的PAT）
+                    url: 'https://github.com/zhangping99/myflaskapp.git',
+                    branch: 'main',
+                    credentialsId: 'aa'
                 )
-                echo "代码拉取完成！当前工作目录：${env.WORKSPACE}"  // 打印工作目录，方便排查路径问题
+                echo "Code pulled successfully! Current workspace: ${env.WORKSPACE}"
             }
         }
 
         // --------------------------
-        // 阶段2：安装依赖（用系统pip，含版本验证）
+        // Stage 2: Install Dependencies
         // --------------------------
         stage('Install Dependencies') {
-			steps {
-					bat '''
-						@echo off
-						chcp 65001 >nul  // 强制设置UTF-8编码，解决中文乱码（关键）
-						echo ==============================================
-						echo Verify current Python/pip version (must match system)
-						echo ==============================================
-						python --version || (echo "❌ Python command not found! Check PATH" && exit /b 1)
-						pip --version || (echo "❌ pip command not found! Check Python PATH" && exit /b 1)
-						
-						echo ==============================================
-						echo Kill remaining Python processes (release file/port)
-						echo ==============================================
-						taskkill /f /im python.exe 2>nul || echo "⚠️ No remaining Python processes found, continue"
-						
-						echo ==============================================
-						echo Upgrade pip and install project dependencies
-						echo ==============================================
-						python -m pip install --upgrade pip --quiet || (echo "❌ Failed to upgrade pip! Check network/permissions" && exit /b 1)
-						pip install -r requirements.txt flake8 pytest coverage --quiet || (echo "❌ Failed to install dependencies! Check requirements.txt" && exit /b 1)
-						
-						echo ==============================================
-						echo Dependencies installed successfully! Installed packages:
-						echo ==============================================
-						pip list | findstr /i "flask pytest flake8"
-					'''
-				}
+            steps {
+                bat '''
+                    @echo off
+                    chcp 65001 >nul  :: Force UTF-8 encoding to fix character issues
+                    echo ==============================================
+                    echo Verify current Python/pip version (must match system)
+                    echo ==============================================
+                    "%PYTHON_PATH%" --version || (echo "❌ Python command not found! Check PATH" && exit /b 1)
+                    "%PYTHON_PATH%" -m pip --version || (echo "❌ pip command not found! Check Python installation" && exit /b 1)
+                    
+                    echo ==============================================
+                    echo Kill remaining Python processes (release files/ports)
+                    echo ==============================================
+                    taskkill /f /im python.exe 2>nul || echo "⚠️ No remaining Python processes found, continuing"
+                    
+                    echo ==============================================
+                    echo Upgrade pip and install project dependencies
+                    echo ==============================================
+                    "%PYTHON_PATH%" -m pip install --upgrade pip --quiet || (echo "❌ Failed to upgrade pip! Check network/permissions" && exit /b 1)
+                    "%PYTHON_PATH%" -m pip install -r requirements.txt flake8 pytest coverage --quiet || (echo "❌ Failed to install dependencies! Check requirements.txt" && exit /b 1)
+                    
+                    echo ==============================================
+                    echo Dependencies installed successfully! Installed packages:
+                    echo ==============================================
+                    "%PYTHON_PATH%" -m pip list | findstr /i "flask pytest flake8"
+                '''
+            }
         }
 
         // --------------------------
-        // 阶段3：代码风格检查（flake8，确保代码规范）
+        // Stage 3: Code Style Check (flake8)
         // --------------------------
         stage('Code Lint (flake8)') {
             steps {
                 bat '''
                     @echo off
+                    chcp 65001 >nul  :: Force UTF-8 encoding
                     echo ==============================================
-                    echo 执行代码风格检查（flake8）
+                    echo Execute code style check (flake8)
                     echo ==============================================
-                    flake8 app.py tests/ || (
-                        echo "❌ 代码风格检查失败！请根据日志修复（如空行、缩进问题）"
-                        exit /b 1  // 检查失败则终止流程，避免后续无效执行
+                    "%PYTHON_PATH%" -m flake8 app.py tests/ || (
+                        echo "❌ Code style check failed! Please fix issues according to logs (e.g., blank lines, indentation)"
+                        exit /b 1
                     )
-                    echo "✅ 代码风格检查通过！无PEP8错误"
+                    echo "✅ Code style check passed! No PEP8 errors"
                 '''
             }
         }
 
         // --------------------------
-        // 阶段4：自动化测试（pytest，确保功能正常）
+        // Stage 4: Automated Tests (pytest)
         // --------------------------
         stage('Run Tests (pytest)') {
             steps {
                 bat '''
                     @echo off
+                    chcp 65001 >nul  :: Force UTF-8 encoding
                     echo ==============================================
-                    echo 执行自动化测试（pytest）并生成覆盖率报告
+                    echo Execute automated tests (pytest) and generate coverage report
                     echo ==============================================
-                    pytest --cov=app tests/ --cov-report=html || (
-                        echo "❌ 自动化测试失败！请检查测试用例或代码逻辑"
+                    "%PYTHON_PATH%" -m pytest --cov=app tests/ --cov-report=html || (
+                        echo "❌ Automated tests failed! Please check test cases or code logic"
                         exit /b 1
                     )
-                    echo "✅ 自动化测试通过！所有用例执行成功"
+                    echo "✅ Automated tests passed! All test cases executed successfully"
                 '''
             }
-            // 测试完成后，在Jenkins中展示覆盖率报告（需安装HTML Publisher插件）
+            // Display coverage report in Jenkins (requires HTML Publisher plugin)
             post {
                 always {
                     publishHTML(target: [
                         allowMissing: false,
                         alwaysLinkToLastBuild: false,
                         keepAll: true,
-                        reportDir: 'htmlcov',  // 覆盖率报告目录（pytest自动生成）
+                        reportDir: 'htmlcov',
                         reportFiles: 'index.html',
-                        reportName: 'Test Coverage Report'  // Jenkins中显示的报告名称
+                        reportName: 'Test Coverage Report'
                     ])
                 }
             }
         }
 
         // --------------------------
-        // 阶段5：部署应用（调用deploy.bat，后台启动Flask）
+        // Stage 5: Deploy Application
         // --------------------------
         stage('Deploy Application') {
             steps {
                 bat '''
                     @echo off
+                    chcp 65001 >nul  :: Force UTF-8 encoding
                     echo ==============================================
-                    echo 执行部署脚本（deploy.bat）
+                    echo Execute deployment script (deploy.bat)
                     echo ==============================================
                     if not exist "deploy.bat" (
-                        echo "❌ 部署脚本deploy.bat不存在！请检查项目根目录"
+                        echo "❌ Deployment script deploy.bat not found! Please check project root directory"
                         exit /b 1
                     )
                     call deploy.bat || (
-                        echo "❌ 部署脚本执行失败！请查看deploy.bat日志"
+                        echo "❌ Deployment script execution failed! Please check deploy.bat logs"
                         exit /b 1
                     )
-                    echo "✅ 应用部署完成！访问地址：http://localhost:5000"
+                    echo "✅ Application deployed successfully! Access address: http://localhost:5000"
                 '''
             }
         }
     }
 
     // --------------------------
-    // 全局构建结果：成功/失败提示（可选：添加邮件通知）
+    // Global build results
     // --------------------------
     post {
         success {
-            echo "🎉 全流程CI/CD执行成功！"
-            // （可选）添加邮件通知，需先配置Jenkins邮件插件
-            // emailext to: 'your-email@xxx.com', subject: 'Jenkins构建成功', body: '应用已部署到http://localhost:5000'
+            echo "🎉 Full CI/CD pipeline executed successfully!"
+            // Optional: Add email notification (requires email plugin configuration)
+            // emailext to: 'your-email@xxx.com', subject: 'Jenkins Build Success', body: 'Application deployed to http://localhost:5000'
         }
         failure {
-            echo "❌ 全流程CI/CD执行失败！请查看各阶段日志排查问题"
-            // （可选）失败时发送邮件通知
-            // emailext to: 'your-email@xxx.com', subject: 'Jenkins构建失败', body: '失败日志：${BUILD_URL}console'
+            echo "❌ Full CI/CD pipeline execution failed! Please check each stage's logs for troubleshooting"
+            // Optional: Add failure notification
+            // emailext to: 'your-email@xxx.com', subject: 'Jenkins Build Failed', body: 'Failure logs: ${BUILD_URL}console'
         }
     }
 }

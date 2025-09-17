@@ -1,5 +1,5 @@
 @echo off
-chcp 65001 >nul  // 强制UTF-8编码
+chcp 65001 >nul  // Force UTF-8 encoding
 
 :: --------------------------
 :: Configuration (Modify according to your environment!)
@@ -7,7 +7,7 @@ chcp 65001 >nul  // 强制UTF-8编码
 set "JENKINS_WORKSPACE=C:\ProgramData\Jenkins\.jenkins\workspace\myflaskapp"
 set "DEPLOY_DIR=D:\my-python-webapp-deploy"
 set "PORT=5000"
-set "PYTHON_PATH=d:\install\python310\python.exe"  // Your system Python path
+set "PYTHON_PATH=d:\install\python310\python.exe"  // Path to your system's Python executable
 
 echo ==============================================
 echo Deployment Configuration
